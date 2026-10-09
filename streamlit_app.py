@@ -24,7 +24,7 @@ st.title("Explorador de operación")
 st.caption("Aplicación inicial para explorar resultados por área y región.")
 
 # TODO OBLIGATORIO: escribe tu nombre completo.
-st.write("**Desarrollado por:** Escribe aquí tu nombre")
+st.write("**Desarrollado por:** Paola Estefanía Álvarez Santoyo")
 
 st.sidebar.header("Filtros")
 
@@ -35,30 +35,94 @@ areas_seleccionadas = st.sidebar.multiselect(
     default=areas_disponibles,
 )
 
-df_filtrado = df[df["Área"].isin(areas_seleccionadas)].copy()
 
-st.subheader("Datos disponibles")
-st.dataframe(df_filtrado, width="stretch", hide_index=True)
+regiones_disponibles = sorted(df["Región"].unique())
 
-casos_por_fecha = (
-    df_filtrado.groupby("Fecha", as_index=False)["Casos"]
-    .sum()
-    .sort_values("Fecha")
+regiones_seleccionadas = st.sidebar.multiselect(
+    "Región",
+    options=regiones_disponibles,
+    default=regiones_disponibles
 )
 
-fig = px.line(
-    casos_por_fecha,
-    x="Fecha",
-    y="Casos",
-    markers=True,
-    title="Casos por fecha",
-)
-st.plotly_chart(fig, width="stretch")
 
-st.info(
-    "Esta es la versión inicial. Selecciona una opción de la actividad y agrega "
-    "una mejora funcional para el usuario."
-)
+df_filtrado = df[
+    (df["Área"].isin(areas_seleccionadas)) &
+    (df["Región"].isin(regiones_seleccionadas))
+].copy()
+
+
+#Calcular indicadores con los datos filtrados
+total_casos = df_filtrado["Casos"].sum()
+satisfaccion_promedio = df_filtrado["Satisfacción"].mean()
+
+
+#Crear dos pestañas para organizar la aplicación
+tab_resumen, tab_detalle = st.tabs([
+    "Resumen ejecutivo",
+    "Detalle de datos"
+])
+
+#Primera pestaña: indicadores y gráfica
+with tab_resumen:
+    st.subheader("Indicadores ejecutivos")
+
+    #Crear dos columnas para los indicadores
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.metric(
+            label="Total de casos",
+            value=f"{total_casos:,.0f}"
+        )
+
+    with col2:
+        st.metric(
+            label="Satisfacción promedio",
+            value=f"{satisfaccion_promedio:.1f}"
+            if not df_filtrado.empty else "Sin datos"
+        )
+
+    #Crear gráfica con los datos filtrados
+    st.subheader("Evolución de casos por fecha")
+
+    if not df_filtrado.empty:
+        casos_por_fecha = (
+            df_filtrado.groupby("Fecha", as_index=False)["Casos"]
+            .sum()
+            .sort_values("Fecha")
+        )
+
+        fig = px.line(
+            casos_por_fecha,
+            x="Fecha",
+            y="Casos",
+            markers=True,
+            title="Casos por fecha"
+        )
+
+        st.plotly_chart(fig, width="stretch")
+    else:
+        st.warning("No hay datos para los filtros seleccionados.")
+
+#Segunda pestaña: tabla de datos
+with tab_detalle:
+    st.subheader("Datos disponibles")
+
+    st.write(
+        "Consulta los registros correspondientes "
+        "a las áreas y regiones seleccionadas."
+    )
+
+    st.dataframe(
+        df_filtrado,
+        width="stretch",
+        hide_index=True
+    )
+
+    st.caption(
+        f"Total de registros visibles: {len(df_filtrado)}"
+    )
+
 
 
 # ================================================================
